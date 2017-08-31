@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -18,31 +19,44 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
     ListView listView;
-    MediaPlayer mediaPlayer;
-    SeekBar seekbar = null;
+    MediaPlayer mediaPlayer= new MediaPlayer();;
+    SeekBar seekbar ;
+    int duration  ;
+    TextView timerem;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        //initiate stuff
         listView = (ListView) findViewById(R.id.list);
         seekbar = (SeekBar) findViewById(R.id.seekBar);
-
+        timerem =(TextView) findViewById(R.id.time);
         // get the file names using fields
-        mediaPlayer = new MediaPlayer();
-        seekbar.setMax(mediaPlayer.getDuration());
-        new Timer().scheduleAtFixedRate(new TimerTask() {
+        Field[] fields=R.raw.class.getFields();
+        List<String> data = new ArrayList<String>();
+        for(int count=1; count < fields.length-1; count++){
+            Log.i("Raw Asset: ", fields[count].getName());
+            data.add(fields[count].getName());
+        }
+        //initiate arrayadapter
+        ArrayAdapter adapter = new ArrayAdapter(this,android.R.layout.simple_list_item_1,data);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void run() {
-                seekbar.setProgress(mediaPlayer.getCurrentPosition());
-                //Log.i("duration",Integer.toString(mediaPlayer.getDuration()));
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String title = listView.getItemAtPosition(i).toString();
+                playMusic(title);
             }
-        },0,100);
 
+
+        });
+        //seekbar
         seekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+
                 mediaPlayer.seekTo(i);
 
             }@Override
@@ -55,33 +69,31 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        Field[] fields=R.raw.class.getFields();
-        List<String> data = new ArrayList<String>();
-        for(int count=1; count < fields.length-1; count++){
-            Log.i("Raw Asset: ", fields[count].getName());
-            data.add(fields[count].getName());
-        }
-        ArrayAdapter adapter = new ArrayAdapter(this,android.R.layout.simple_list_item_1,data);
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String title = listView.getItemAtPosition(i).toString();
-                playMusic(title);
-            }
-
-
-        });
 
 
 
     }
 
     private void playMusic(String title) {
+
         int resId = getResources().getIdentifier(title, "raw", getPackageName());
         Log.i(title, String.valueOf(resId));
         mediaPlayer.reset();
         mediaPlayer = MediaPlayer.create(getApplicationContext(), resId);
+        duration = mediaPlayer.getDuration();
+        int timerseconds = duration/1000;
+        int timemin = timerseconds/60;
+        int timersecrem = timerseconds%60;
+        timerem.setVisibility(View.VISIBLE);
+        timerem.setText(String.valueOf(timemin+":"+timersecrem));
+        seekbar.setMax(duration);
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                seekbar.setProgress(mediaPlayer.getCurrentPosition());
+                //Log.i("duration",Integer.toString(mediaPlayer.getDuration()));
+            }
+        },0,10000);
         mediaPlayer.start();
 
     }
